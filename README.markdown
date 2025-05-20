@@ -74,4 +74,6 @@ O projeto é composto por quatro scripts principais: `frente.py`, `ttmaker.py`, 
 ## Licença
 Este projeto é fornecido como está, sem garantias. Use por sua conta e risco. 
 
-"Confie no Senhor de todo o seu coração e não se apoie em seu próprio entendimento; reconheça-o em todos os seus caminhos, e Ele dirigirá seus passos." (Provérbios 3:5-6)
+
+##
+"Confie no Senhor de todo o seu coração e não se apoie em seu próprio entendimento; reconheça-o em todos os seus caminhos, e Ele dirigirá seus passos." (Provérbios 3:5-6)✨
