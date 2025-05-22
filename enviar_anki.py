@@ -2,15 +2,17 @@ import requests
 import time
 import os
 import glob
+import sys
 from docx import Document
 from audio import frente, verso, audios, caminho_midia_anki, caminho_dos_audios
 
+sys.stdout.reconfigure(encoding='utf-8')
 def limpar_documento(caminho):
     doc = Document()
     doc.save(caminho)
     print(f"Conteúdo apagado de: {caminho}")
 
-def adicionar_cartao_anki(frente_txt, verso_txt, audio_tag, baralho="Gringos"): # Mude para seu baralho
+def adicionar_cartao_anki(frente_txt, verso_txt, audio_tag, baralho="teste"): # Mude para seu baralho
     # Extrai o nome do arquivo de áudio (remove [sound: e ])
     audio_file = audio_tag[7:-1].strip() if audio_tag.startswith("[sound:") and audio_tag.endswith("]") else ""
     
@@ -63,13 +65,13 @@ def adicionar_cartao_anki(frente_txt, verso_txt, audio_tag, baralho="Gringos"): 
 # Verifica os dados de entrada
 print("Verificando dados de entrada...")
 for i, (f, v, a) in enumerate(zip(frente, verso, audios), 1):
-    print(f"Cartão {i}: Frente='{f}', Verso='{v}', Áudio='{a}'")
+    print(f"Cartão {i}: Frente='{f.encode('ascii', 'ignore').decode()}', Verso='{v.encode('ascii', 'ignore').decode()}', Áudio='{a}'")
 
 
 # Envia todos os cartões
 cartoes_adicionados = 0
 for en, pt, audio in zip(frente, verso, audios):
-    if adicionar_cartao_anki(en, pt, audio, baralho="Gringos"): # Mude para seu baralho
+    if adicionar_cartao_anki(en, pt, audio, baralho="teste"): # Mude para seu baralho
         cartoes_adicionados += 1
     time.sleep(0.5)
 

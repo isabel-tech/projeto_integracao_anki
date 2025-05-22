@@ -64,7 +64,7 @@ try:
         WebDriverWait(driver, 10).until(
 			EC.invisibility_of_element_located((By.CLASS_NAME, "toast-info"))
 		)
-        
+        time.sleep(5)
 		# Clica no botão de conversão
         button_convert = WebDriverWait(driver, 20).until(
 			EC.element_to_be_clickable((By.ID, 'tts_order_submit'))
