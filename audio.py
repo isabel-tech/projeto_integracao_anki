@@ -16,17 +16,12 @@ arquivos.sort(key=lambda f: os.path.getmtime(os.path.join(caminho_dos_audios, f)
 
 
 # Renomeia e adiciona ao documento
-for i, nome_antigo in enumerate(arquivos, start=1):
-    novo_nome = f"ttsmaker-vip-file-{i}.mp3"
+for nome_antigo in arquivos:
+    
     caminho_antigo = os.path.join(caminho_dos_audios, nome_antigo)
-    caminho_novo = os.path.join(caminho_dos_audios, novo_nome)
-
-    # Renomeia o arquivo
-    os.rename(caminho_antigo, caminho_novo)
-    print("Renomeado:", nome_antigo, "-->", novo_nome)
-
+    
     # Adiciona ao Word com o formato que o Anki espera
-    linha_audio = f"[sound:{novo_nome}]"
+    linha_audio = f"[sound:{caminho_antigo}]"
     documento.add_paragraph(linha_audio)
 
 # Salva o documento
