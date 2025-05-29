@@ -1,11 +1,38 @@
 import os
 import shutil
+import time
 from docx import Document
 from frente import ler_frases
 
 # Caminho da pasta de downloads
 caminho_dos_audios = r'D:\Users\isabe\Downloads'  # Mude para seu usuário
 documento = Document()
+
+def aguardar_downloads(caminho_dos_audios, quantidade_esperada, timeout=180):
+    inicio = time.time()
+    
+    while True:
+        arquivos_mp3 = [f for f in os.listdir(caminho_dos_audios) 
+                        if f.startswith("ttsmaker-vip-file") and f.endswith(".mp3")]
+        
+        arquivos_incompletos = [f for f in os.listdir(caminho_dos_audios) 
+                                if f.endswith(".crdownload")]
+        
+        print(f"Aguardando... {len(arquivos_mp3)}/{quantidade_esperada} concluídos. "
+              f"Downloads em andamento: {len(arquivos_incompletos)}")
+        
+        if len(arquivos_mp3) >= quantidade_esperada and len(arquivos_incompletos) == 0:
+            print("Todos os downloads concluídos!")
+            return True
+        
+        if time.time() - inicio > timeout:
+            print("Timeout: Downloads não concluídos no tempo esperado.")
+            return False
+        
+        time.sleep(2)
+    
+quantidade_de_frases = len(ler_frases("frente.docx"))  # assume que 1 áudio por frase
+aguardar_downloads(caminho_dos_audios, quantidade_esperada=quantidade_de_frases)
 
 # Lista todos os arquivos mp3 desejados
 arquivos = [f for f in os.listdir(caminho_dos_audios) 
@@ -43,12 +70,16 @@ caminho_midia_anki = r'C:\Users\isabe\AppData\Roaming\Anki2\Isabel\collection.me
 # Copia os arquivos .mp3 da pasta Downloads para a pasta de mídia do Anki
 for linha in audios:
     if linha.startswith("[sound:") and linha.endswith("]"):
-        nome_arquivo = linha[7:-1].strip()
+        caminho_completo = linha[7:-1].strip()
+        nome_arquivo = os.path.basename(caminho_completo)  
         origem = os.path.join(caminho_dos_audios, nome_arquivo)
         print(f"Verificando arquivo: {origem}")
         destino = os.path.join(caminho_midia_anki, nome_arquivo)
         if os.path.exists(origem):
-            shutil.copy2(origem, destino)
+            if os.path.abspath(origem) != os.path.abspath(destino): 
+                shutil.copy2(origem, destino)
+            else:
+                print(f"Arquivo já está na pasta destino: {nome_arquivo}")
         else:
             print(f"Áudio não encontrado: {nome_arquivo}")
             

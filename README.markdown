@@ -69,7 +69,7 @@ O projeto é composto por quatro scripts principais: `frente.py`, `ttmaker.py`, 
 - **TTSMaker**: O script assume que você tem uma conta válida no TTSMaker. Algumas funcionalidades podem exigir uma conta VIP.
 - **Sistema de Arquivos**: Ajuste os caminhos de diretórios (`caminho_dos_audios` e `caminho_midia_anki`) para corresponder ao seu sistema operacional e configuração do Anki.
 - **Erro de Timeout**: Se os arquivos MP3 não forem baixados dentro do tempo limite (60 segundos por padrão), o script será interrompido. Verifique sua conexão com a internet ou aumente o tempo limite em `main.py`.
-
+- **Atualização do Chrome**: Para evitar erros durante a execução do Selenium com `undetected-chromedriver`, mantenha o Google Chrome sempre atualizado para a versão mais recente compatível com o driver.
 
 ## Licença
 Este projeto é fornecido como está, sem garantias. Use por sua conta e risco. 
