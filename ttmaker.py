@@ -4,6 +4,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from frente import ler_frases
+from config import email_tts, senha_tts
 import undetected_chromedriver as uc
 import time
 
@@ -28,9 +29,9 @@ try:
     driver.get("https://pro.ttsmaker.com/user/login")
 	# Preenche email e senha
     email_input = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'input[placeholder="you@email.com"]')))
-    email_input.send_keys('barreto.cybersec@gmail.com') # Mude para o seu email
+    email_input.send_keys(email_tts) # Mude para o seu email
     password_input = driver.find_element(By.ID, "password-vue-id")
-    password_input.send_keys('QaWs7193.') # Mude para a sua senha
+    password_input.send_keys(senha_tts) # Mude para a sua senha
 
 	# Clica em "Sign In"
     button_sign_in = WebDriverWait(driver, 20).until(
@@ -71,10 +72,9 @@ try:
 		)
         driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", button_convert)
         button_convert.click()
-        time.sleep(1)
+        time.sleep(5)
 		
 		# Clica no botão de download
-        time.sleep(1)
         button_download = WebDriverWait(driver, 20).until(
 			EC.element_to_be_clickable((By.ID, 'tts_mp3_download_btn'))
 		)

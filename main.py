@@ -53,7 +53,7 @@ def run_scripts():
     # Aguarda os arquivos MP3 serem baixados
     print("Aguardando arquivos MP3 serem baixados...")
     try:
-        wait_for_files(caminho_dos_audios, "ttsmaker-vip-file", ".mp3", expected_mp3_count)
+        wait_for_files(caminho_dos_audios, "ttsmaker-vip-file", ".mp3", expected_mp3_count, timeout=3000)
     except TimeoutError as e:
         print(e)
         return

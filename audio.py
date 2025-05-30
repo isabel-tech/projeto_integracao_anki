@@ -3,36 +3,10 @@ import shutil
 import time
 from docx import Document
 from frente import ler_frases
+from config import caminho_dos_audios, caminho_midia_anki
 
-# Caminho da pasta de downloads
-caminho_dos_audios = r'D:\Users\isabe\Downloads'  # Mude para seu usuário
+
 documento = Document()
-
-def aguardar_downloads(caminho_dos_audios, quantidade_esperada, timeout=180):
-    inicio = time.time()
-    
-    while True:
-        arquivos_mp3 = [f for f in os.listdir(caminho_dos_audios) 
-                        if f.startswith("ttsmaker-vip-file") and f.endswith(".mp3")]
-        
-        arquivos_incompletos = [f for f in os.listdir(caminho_dos_audios) 
-                                if f.endswith(".crdownload")]
-        
-        print(f"Aguardando... {len(arquivos_mp3)}/{quantidade_esperada} concluídos. "
-              f"Downloads em andamento: {len(arquivos_incompletos)}")
-        
-        if len(arquivos_mp3) >= quantidade_esperada and len(arquivos_incompletos) == 0:
-            print("Todos os downloads concluídos!")
-            return True
-        
-        if time.time() - inicio > timeout:
-            print("Timeout: Downloads não concluídos no tempo esperado.")
-            return False
-        
-        time.sleep(2)
-    
-quantidade_de_frases = len(ler_frases("frente.docx"))  # assume que 1 áudio por frase
-aguardar_downloads(caminho_dos_audios, quantidade_esperada=quantidade_de_frases)
 
 # Lista todos os arquivos mp3 desejados
 arquivos = [f for f in os.listdir(caminho_dos_audios) 
@@ -61,10 +35,7 @@ verso = ler_frases("verso.docx")
 audios = ler_frases("audio.docx")
 
 # Garante que todos têm o mesmo número de linhas
-assert len(frente) == len(verso), "Os arquivos devem ter o mesmo número de frases!"
-
-# Caminho da pasta de mídia do Anki (ajuste se necessário)
-caminho_midia_anki = r'C:\Users\isabe\AppData\Roaming\Anki2\Isabel\collection.media' # Mude para seu usuário
+#assert len(frente) == len(verso), "Os arquivos devem ter o mesmo número de frases!"
 
 
 # Copia os arquivos .mp3 da pasta Downloads para a pasta de mídia do Anki
