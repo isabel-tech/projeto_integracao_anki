@@ -57,7 +57,7 @@ def adicionar_cartao_anki(frente_txt, verso_txt, audio_tag, baralho_anki): # Mud
             print(f"Erro ao criar cartão (Frente: '{frente_txt}'): {resultado['error']}")
             return False
         else:
-            print(f"Cartão criado com sucesso: '{frente_txt}'")
+            print(f"Cartão criado com sucesso: '{frente_txt}'".encode('utf-8', errors='ignore').decode())
             return True
     except requests.exceptions.ConnectionError:
         print("Erro: Não foi possível conectar ao Anki. Certifique-se de que o Anki está aberto e o AnkiConnect está ativo.")
@@ -81,7 +81,7 @@ print(f"Processo concluído! {cartoes_adicionados} cartões adicionados com suce
 arquivos = ["frente.docx", "verso.docx", "audio.docx"]
 
 for arquivo in arquivos:
-    limpar_documento(arquivo)
+   limpar_documento(arquivo)
 
 print("Processo concluído com sucesso!")
 

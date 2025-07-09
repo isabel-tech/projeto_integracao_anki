@@ -10,6 +10,7 @@ def wait_for_files(directory, prefix, extension, expected_count, timeout=60):
     start_time = time.time()
     while True:
         files = [f for f in os.listdir(directory) if f.startswith(prefix) and f.endswith(extension)]
+        print(f"Aguardando... {len(files)}/{expected_count} arquivos encontrados.")
         if len(files) >= expected_count:
             print(f"Encontrados {len(files)} arquivos {prefix}*.{extension}")
             return True
@@ -25,7 +26,9 @@ def run_script(script_name, capture_output=True):
             [sys.executable, script_name],  # Substitui "python" por sys.executable
             check=True,
             capture_output=capture_output,
-            text=True
+            text=True,
+            encoding='utf-8',
+            errors="ignore"
         )
         if capture_output:
             print(f"Saída de {script_name}:\n{result.stdout}")
@@ -53,7 +56,7 @@ def run_scripts():
     # Aguarda os arquivos MP3 serem baixados
     print("Aguardando arquivos MP3 serem baixados...")
     try:
-        wait_for_files(caminho_dos_audios, "ttsmaker-vip-file", ".mp3", expected_mp3_count, timeout=3000)
+        wait_for_files(caminho_dos_audios, "ttsmaker-vip-file", ".mp3", expected_mp3_count, timeout=60)
     except TimeoutError as e:
         print(e)
         return

@@ -4,9 +4,11 @@ from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from frente import ler_frases
+from audio import caminho_dos_audios
 from config import email_tts, senha_tts
 import undetected_chromedriver as uc
 import time
+import os
 
 print("Iniciando o script!")
 
@@ -54,10 +56,13 @@ try:
         caixa_texto = WebDriverWait(driver, 20).until(
 			EC.presence_of_element_located((By.ID, "UserInputTextarea"))
 		)
+        
+        time.sleep(1)
+        
 		# Coloca a frase no campo
         caixa_texto.clear()
         caixa_texto.send_keys(frase)
-
+        
 		# Espera o "toast" sair da frente, se existir
         WebDriverWait(driver, 10).until(
 			EC.invisibility_of_element_located((By.CLASS_NAME, 'toast-message'))
@@ -65,13 +70,16 @@ try:
         WebDriverWait(driver, 10).until(
 			EC.invisibility_of_element_located((By.CLASS_NAME, "toast-info"))
 		)
+        
         time.sleep(5)
+        
 		# Clica no botão de conversão
         button_convert = WebDriverWait(driver, 20).until(
 			EC.element_to_be_clickable((By.ID, 'tts_order_submit'))
 		)
         driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", button_convert)
         button_convert.click()
+        
         time.sleep(5)
 		
 		# Clica no botão de download
@@ -79,10 +87,28 @@ try:
 			EC.element_to_be_clickable((By.ID, 'tts_mp3_download_btn'))
 		)
         driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", button_download)
-        button_download.click()
-        print("Botão de download clicado com sucesso!")
-        time.sleep(1)
         
+        time.sleep(5)
+        
+        button_download.click()
+        
+        # --- Coloque o código para esperar o download aqui ---
+        timeout = 30
+        start_time = time.time()
+        while True:
+            arquivos = os.listdir(caminho_dos_audios)
+            mp3s = [f for f in arquivos if f.endswith(".mp3")]
+            if mp3s:
+                break
+            if time.time() - start_time > timeout:
+                print("Timeout no download do áudio")
+                break
+            time.sleep(1)
+            print("Botão de download clicado com sucesso!")
+        
+        time.sleep(5)
+        
+  
 except Exception as e:
     print("Erro durante a execução:", e)
 

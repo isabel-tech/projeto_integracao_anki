@@ -34,8 +34,11 @@ frente = ler_frases("frente.docx")
 verso = ler_frases("verso.docx")
 audios = ler_frases("audio.docx")
 
+print("Frente:", len(frente))
+print("Verso:", len(verso))
+
 # Garante que todos têm o mesmo número de linhas
-#assert len(frente) == len(verso), "Os arquivos devem ter o mesmo número de frases!"
+assert len(frente) == len(verso), "Os arquivos devem ter o mesmo número de frases!"
 
 
 # Copia os arquivos .mp3 da pasta Downloads para a pasta de mídia do Anki
