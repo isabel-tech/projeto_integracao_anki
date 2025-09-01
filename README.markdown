@@ -4,10 +4,9 @@
 O **Anki TTS Automator** é um projeto em Python que automatiza a criação de cartões no Anki para aprendizado de idiomas. Ele realiza as seguintes etapas:
 1. Lê frases em inglês e suas traduções em português de arquivos `.docx`.
 2. Converte as frases em inglês em áudio usando o serviço TTSMaker.
-3. Renomeia e organiza os arquivos de áudio gerados.
-4. Integra os áudios e as frases em um formato compatível com o Anki.
-5. Adiciona os cartões ao Anki via AnkiConnect.
-6. Limpa os arquivos temporários após a conclusão.
+3. Integra os áudios e as frases em um formato compatível com o Anki.
+4. Adiciona os cartões ao Anki via AnkiConnect.
+5. Limpa os arquivos temporários após a conclusão.
 
 O projeto é composto por quatro scripts principais: `frente.py`, `ttmaker.py`, `audio.py` e `enviar_anki.py`, com um script orquestrador `main.py` que coordena a execução.
 
