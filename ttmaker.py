@@ -128,9 +128,7 @@ def main():
 
         # Loop para converter e baixar cada frase
         for i, frase in enumerate(frases_em_ingles, 1):
-            try:
-                print(f"Processando frase {i}/{len(frases_em_ingles)}: {frase}")
-                
+            try:                
                 caixa_texto = WebDriverWait(driver, 20).until(
                     EC.presence_of_element_located((By.ID, "UserInputTextarea"))
                 )
@@ -184,7 +182,7 @@ def main():
                 print("Continuando para a próxima frase...")
                 continue
 
-        print(" Todos os áudios baixados com sucesso!")
+        print("Todos os áudios baixados com sucesso!")
         sucesso_operacao = True  # Marca que a operação foi bem-sucedida
         return True
 
@@ -197,7 +195,6 @@ def main():
         # FECHAMENTO CORRETO COM SELENIUM COMUM
         if driver is not None:
             try:
-                print("Fechando o navegador...")
                 driver.quit()
                 print("Navegador fechado com sucesso!")
             except Exception as e:

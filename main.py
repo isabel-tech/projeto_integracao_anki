@@ -1,9 +1,10 @@
 import os
 import subprocess
 import time
-from frente import ler_dados_excel  # Já está correto
+from frente import ler_dados_excel
 from audio import caminho_dos_audios
 import sys
+from ttmaker import obter_audios_existentes, limpar_apenas_novos_audios 
 
 def wait_for_files(directory, prefix, extension, expected_count, timeout=60):
     start_time = time.time()
@@ -39,7 +40,11 @@ def run_script(script_name, capture_output=True):
         return False
 
 def run_scripts():
-    # Lê o número de frases do Excel (NÃO MAIS DO DOCX)
+    # NOVO: Captura o estado inicial dos áudios ANTES de qualquer operação
+    audios_existentes_inicio = obter_audios_existentes()
+    print(f"Áudios existentes antes da automatização: {len(audios_existentes_inicio)}")
+
+    # Lê o número de frases do Excel
     frente, verso, audios = ler_dados_excel()
     expected_mp3_count = len(frente)
     
@@ -62,13 +67,18 @@ def run_scripts():
         print("Falha em audio.py. Abortando.")
         return
 
-    # VERIFICAÇÃO REMOVIDA: Não precisa mais verificar audio.docx
-    # O audio.py agora trabalha diretamente com os arquivos MP3
-
     # Executa enviar_anki.py
     if not run_script("enviar_anki.py"):
         print("Falha em enviar_anki.py.")
         return
+
+    # NOVO: Remove apenas os arquivos gerados durante esta execução
+    print("\n=== LIMPEZA FINAL ===")
+    print("Removendo áudios criados durante a automatização...")
+    if limpar_apenas_novos_audios(audios_existentes_inicio):
+        print("Áudios temporários removidos com sucesso!")
+    else:
+        print("Falha ao remover áudios temporários.")
 
     print("Todos os scripts foram executados com sucesso!")
 

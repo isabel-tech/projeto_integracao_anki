@@ -3,12 +3,9 @@ import time
 import os
 import shutil
 import pandas as pd
-from docx import Document
 from audio import frente, verso, audios
 from config import caminho_midia_anki, baralho_anki
-from ttmaker import limpar_apenas_novos_audios, obter_audios_existentes
-import glob
-from audio import caminho_dos_audios
+
 def limpar_excel(caminho_excel):
     """Limpa as colunas Frente e Verso do Excel após a execução"""
     try:
@@ -17,8 +14,10 @@ def limpar_excel(caminho_excel):
         df['Verso'] = ''
         df.to_excel(caminho_excel, index=False)
         print(f"Colunas 'Frente' e 'Verso' limpas no arquivo: {caminho_excel}")
+        return True
     except Exception as e:
         print(f"Erro ao limpar Excel: {e}")
+        return False
         
 def copiar_arquivos_audio():
     """Copia apenas os arquivos de áudio necessários"""
@@ -101,10 +100,6 @@ def adicionar_cartao_anki(frente_txt, verso_txt, audio_tag, baralho_anki, numero
         return False
 
 try:
-    audios_existentes_inicio = obter_audios_existentes()
-    print(f"Áudios existentes antes da operação: {len(audios_existentes_inicio)}")
-    # PRIMEIRO: Verifica os dados
-    print("=== INICIANDO PROCESSO ===")
     print(f"Cartões a processar: {len(frente)}")
     print(f"Versos disponíveis: {len(verso)}") 
     print(f"Áudios disponíveis: {len(audios)}")
@@ -124,44 +119,50 @@ try:
 
     # Usando um loop while com índice manual para melhor controle
     i = 0
+    max_tentativas_por_cartao = 3  # Máximo de tentativas por cartão
+
     while i < len(frente):
         print(f"\nProcessando cartão {i+1} de {len(frente)}:")
         
-        sucesso = adicionar_cartao_anki(
-            frente[i], 
-            verso[i], 
-            audios[i], 
-            baralho_anki, 
-            numero_cartao=i+1
-        )
+        tentativas = 0
+        sucesso = False
+        
+        while tentativas < max_tentativas_por_cartao and not sucesso:
+            tentativas += 1
+            if tentativas > 1:
+                print(f"Tentativa {tentativas} de {max_tentativas_por_cartao} para o cartão {i+1}")
+            
+            sucesso = adicionar_cartao_anki(
+                frente[i], 
+                verso[i], 
+                audios[i], 
+                baralho_anki, 
+                numero_cartao=i+1
+            )
+            
+            if not sucesso:
+                if tentativas < max_tentativas_por_cartao:
+                    print(f"Aguardando 2 segundos antes de tentar novamente...")
+                    time.sleep(2)
         
         if sucesso:
             cartoes_adicionados += 1
             i += 1  # Só avança para o próximo se foi bem-sucedido
         else:
-            print(f"Tentando novamente o cartão {i+1} após 2 segundos...")
-            time.sleep(2)  # Espera 2 segundos antes de tentar novamente
-            # Não incrementa i, então tenta o mesmo cartão novamente
-
-    print(f"\nProcesso concluído! {cartoes_adicionados} cartões adicionados com sucesso.")
-
-    # SÓ LIMPA SE TUDO DEU CERTO
-    if cartoes_adicionados == len(frente):
-        limpar_excel("cartoes.xlsx")
-        print("Excel limpo com sucesso.")
-
-        # === AQUI: REMOVE APENAS OS ÁUDIOS NOVOS (gerados nesta execução) ===
-        print("Removendo áudios temporários gerados...")
-        limpar_apenas_novos_audios(audios_existentes_inicio)
-        print("Áudios temporários removidos com sucesso.")
-    else:
-        print(f"Apenas {cartoes_adicionados} de {len(frente)} cartões foram adicionados.")
-        print("Mantendo áudios e dados do Excel para recuperação.")
+            print(f"Falha após {max_tentativas_por_cartao} tentativas no cartão {i+1}. Pulando para o próximo...")
+            i += 1  # AVANÇA MESMO COM FALHA para evitar loop infinito
 
 except Exception as e:
     print(f"ERRO CRÍTICO: {e}")
     print("Mantendo arquivos de áudio e dados do Excel para recuperação.")
     print("Execute novamente após resolver o problema.")
     
-    
+# MODIFICADO: Mantemos apenas a limpeza do Excel, a limpeza dos áudios foi movida para main.py
+print("\n=== INICIANDO LIMPEZA ===")
+
+# Limpa o Excel
+if limpar_excel("cartoes.xlsx"):
+    print("Excel limpo com sucesso.")
+else:
+    print("Falha ao limpar Excel.")
 
