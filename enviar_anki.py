@@ -1,96 +1,167 @@
 import requests
 import time
 import os
-import glob
-import sys
+import shutil
+import pandas as pd
 from docx import Document
-from audio import frente, verso, audios, caminho_midia_anki, caminho_dos_audios
-from config import baralho_anki
-
-sys.stdout.reconfigure(encoding='utf-8')
-def limpar_documento(caminho):
-    doc = Document()
-    doc.save(caminho)
-    print(f"Conteúdo apagado de: {caminho}")
-
-def adicionar_cartao_anki(frente_txt, verso_txt, audio_tag, baralho_anki): # Mude para seu baralho
-    # Extrai o nome do arquivo de áudio (remove [sound: e ])
-    audio_file = audio_tag[7:-1].strip() if audio_tag.startswith("[sound:") and audio_tag.endswith("]") else ""
-    
-    # Valida os campos
-    if not frente_txt.strip() or not verso_txt.strip():
-        print(f"Pulando cartão: Frente ou verso vazios (Frente: '{frente_txt}', Verso: '{verso_txt}')")
+from audio import frente, verso, audios
+from config import caminho_midia_anki, baralho_anki
+from ttmaker import limpar_apenas_novos_audios, obter_audios_existentes
+import glob
+from audio import caminho_dos_audios
+def limpar_excel(caminho_excel):
+    """Limpa as colunas Frente e Verso do Excel após a execução"""
+    try:
+        df = pd.read_excel(caminho_excel)
+        df['Frente'] = ''
+        df['Verso'] = ''
+        df.to_excel(caminho_excel, index=False)
+        print(f"Colunas 'Frente' e 'Verso' limpas no arquivo: {caminho_excel}")
+    except Exception as e:
+        print(f"Erro ao limpar Excel: {e}")
+        
+def copiar_arquivos_audio():
+    """Copia apenas os arquivos de áudio necessários"""
+    try:
+        arquivos_copiados = 0
+        for i, audio_tag in enumerate(audios):
+            if audio_tag.startswith("[sound:") and audio_tag.endswith("]"):
+                source_path = audio_tag[7:-1].strip()
+                audio_file = os.path.basename(source_path)
+                dest_path = os.path.join(caminho_midia_anki, audio_file)
+                
+                if os.path.exists(source_path):
+                    try:
+                        shutil.copy2(source_path, dest_path)
+                        arquivos_copiados += 1
+                    except Exception as e:
+                        print(f"Erro ao copiar {audio_file}: {e}")
+                else:
+                    print(f"Arquivo não encontrado: {source_path}")
+        
+        print(f"Total de arquivos copiados: {arquivos_copiados}")
+        return True
+    except Exception as e:
+        print(f"Erro ao copiar arquivos de áudio: {e}")
         return False
-    
-    # Monta o payload
-    payload = {
-        "action": "addNote",
-        "version": 6,
-        "params": {
-            "note": {
-                "deckName": baralho_anki,
-                "modelName": "Básico",
-                "fields": {
-                    "Frente": frente_txt,  # Áudio será adicionado separadamente
-                    "Verso": verso_txt
-                },
-                "options": {
-                    "allowDuplicate": False
-                },
-                "tags": ["automatica"],
-                "audio": [
-                    {
-                        "filename": audio_file,
-                        "path": os.path.join(caminho_midia_anki, audio_file),
-                        "fields": ["Frente"]  # Vincula o áudio ao campo Front
-                    }
-                ] if audio_file else []
+
+def adicionar_cartao_anki(frente_txt, verso_txt, audio_tag, baralho_anki, numero_cartao=0):
+    try:
+        # Extrai apenas o nome do arquivo
+        if audio_tag.startswith("[sound:") and audio_tag.endswith("]"):
+            source_path = audio_tag[7:-1].strip()
+            audio_file = os.path.basename(source_path)
+        else:
+            audio_file = ""
+
+        # Monta o campo Frente com o áudio incluído como texto
+        campo_frente = f"{frente_txt}"
+        if audio_file:
+            campo_frente += f"\n[sound:{audio_file}]"
+
+        payload = {
+            "action": "addNote",
+            "version": 6,
+            "params": {
+                "note": {
+                    "deckName": baralho_anki,
+                    "modelName": "Básico",
+                    "fields": {
+                        "Frente": campo_frente,
+                        "Verso": verso_txt
+                    },
+                    "options": {
+                        "allowDuplicate": False
+                    },
+                    "tags": ["automatica"]
+                }
             }
         }
-    }
 
-    # Envia a requisição
-    try:
+        # Envia a requisição
         resposta = requests.post("http://localhost:8765", json=payload)
         resultado = resposta.json()
+        
         if "error" in resultado and resultado["error"]:
-            print(f"Erro ao criar cartão (Frente: '{frente_txt}'): {resultado['error']}")
+            print(f"Erro ao criar cartão {numero_cartao}: {resultado['error']}")
             return False
         else:
-            print(f"Cartão criado com sucesso: '{frente_txt}'".encode('utf-8', errors='ignore').decode())
+            print("-" * 65)
+            print(f"Frente: {frente_txt}")
+            print(f"Verso: {verso_txt}")
+            print(f"Audio: {audio_file}")
+            print("-" * 65)
             return True
+            
     except requests.exceptions.ConnectionError:
-        print("Erro: Não foi possível conectar ao Anki. Certifique-se de que o Anki está aberto e o AnkiConnect está ativo.")
+        print(f"Erro de conexão no cartão {numero_cartao}: Verifique se o Anki está aberto")
+        return False
+    except Exception as e:
+        print(f"Erro inesperado no cartão {numero_cartao}: {e}")
         return False
 
-# Verifica os dados de entrada
-print("Verificando dados de entrada...")
-for i, (f, v, a) in enumerate(zip(frente, verso, audios), 1):
-    print(f"Cartão {i}: Frente='{f.encode('ascii', 'ignore').decode()}', Verso='{v.encode('ascii', 'ignore').decode()}', Áudio='{a}'")
+try:
+    audios_existentes_inicio = obter_audios_existentes()
+    print(f"Áudios existentes antes da operação: {len(audios_existentes_inicio)}")
+    # PRIMEIRO: Verifica os dados
+    print("=== INICIANDO PROCESSO ===")
+    print(f"Cartões a processar: {len(frente)}")
+    print(f"Versos disponíveis: {len(verso)}") 
+    print(f"Áudios disponíveis: {len(audios)}")
 
+    # Verifica se as listas têm o mesmo tamanho
+    if len(frente) != len(verso) :
+        print("ERRO: As listas têm tamanhos diferentes!")
+        print(f"Frente: {len(frente)}, Verso: {len(verso)}, Áudios: {len(audios)}")
+        raise Exception("Listas com tamanhos inconsistentes")
 
-# Envia todos os cartões
-cartoes_adicionados = 0
-for en, pt, audio in zip(frente, verso, audios):
-    if adicionar_cartao_anki(en, pt, audio, baralho_anki): 
-        cartoes_adicionados += 1
-    time.sleep(0.5)
+    # DEPOIS: Copia os arquivos de áudio
+    if not copiar_arquivos_audio():
+        raise Exception("Falha ao copiar arquivos de áudio")
 
-print(f"Processo concluído! {cartoes_adicionados} cartões adicionados com sucesso.")
+    # FINALMENTE: Cria os cartões
+    cartoes_adicionados = 0
 
-arquivos = ["frente.docx", "verso.docx", "audio.docx"]
+    # Usando um loop while com índice manual para melhor controle
+    i = 0
+    while i < len(frente):
+        print(f"\nProcessando cartão {i+1} de {len(frente)}:")
+        
+        sucesso = adicionar_cartao_anki(
+            frente[i], 
+            verso[i], 
+            audios[i], 
+            baralho_anki, 
+            numero_cartao=i+1
+        )
+        
+        if sucesso:
+            cartoes_adicionados += 1
+            i += 1  # Só avança para o próximo se foi bem-sucedido
+        else:
+            print(f"Tentando novamente o cartão {i+1} após 2 segundos...")
+            time.sleep(2)  # Espera 2 segundos antes de tentar novamente
+            # Não incrementa i, então tenta o mesmo cartão novamente
 
-for arquivo in arquivos:
-   limpar_documento(arquivo)
+    print(f"\nProcesso concluído! {cartoes_adicionados} cartões adicionados com sucesso.")
 
-print("Processo concluído com sucesso!")
+    # SÓ LIMPA SE TUDO DEU CERTO
+    if cartoes_adicionados == len(frente):
+        limpar_excel("cartoes.xlsx")
+        print("Excel limpo com sucesso.")
 
-# Arquivos gerados pelo TTSMaker
-arquivos_mp3 = glob.glob(os.path.join(caminho_dos_audios, "ttsmaker-vip-file*.mp3"))
+        # === AQUI: REMOVE APENAS OS ÁUDIOS NOVOS (gerados nesta execução) ===
+        print("Removendo áudios temporários gerados...")
+        limpar_apenas_novos_audios(audios_existentes_inicio)
+        print("Áudios temporários removidos com sucesso.")
+    else:
+        print(f"Apenas {cartoes_adicionados} de {len(frente)} cartões foram adicionados.")
+        print("Mantendo áudios e dados do Excel para recuperação.")
 
-for arquivo in arquivos_mp3:
-    try:
-        os.remove(arquivo)
-        print(f"[LIMPO] Arquivo removido: {os.path.basename(arquivo)}")
-    except Exception as e:
-        print(f"[ERRO] Falha ao remover {os.path.basename(arquivo)}: {e}")
+except Exception as e:
+    print(f"ERRO CRÍTICO: {e}")
+    print("Mantendo arquivos de áudio e dados do Excel para recuperação.")
+    print("Execute novamente após resolver o problema.")
+    
+    
+
