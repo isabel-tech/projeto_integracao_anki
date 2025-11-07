@@ -6,6 +6,30 @@ from audio import caminho_dos_audios
 import sys
 from ttmaker import obter_audios_existentes, limpar_apenas_novos_audios 
 
+class Logger:
+    def __init__(self):
+        self.width = 80
+        
+    def header(self, title):
+        print(f"\n{'=' * self.width}")
+        print(f"{title:^{self.width}}")
+        print(f"{'=' * self.width}")
+    
+    def section(self, title):
+        print(f"\n{title}")
+        print('-' * self.width)
+    
+    def info(self, message):
+        print(f"[INFO] {message}")
+    
+    def success(self, message):
+        print(f"[SUCCESS] {message}")
+    
+    def error(self, message):
+        print(f"[ERROR] {message}")
+
+logger = Logger()
+
 def wait_for_files(directory, prefix, extension, expected_count, timeout=60):
     start_time = time.time()
     while True:
@@ -13,83 +37,86 @@ def wait_for_files(directory, prefix, extension, expected_count, timeout=60):
         if len(files) >= expected_count:
             return True
         if time.time() - start_time > timeout:
-            raise TimeoutError(f"Timeout: Não foram encontrados {expected_count} arquivos {prefix}*.{extension} em {directory}")
+            raise TimeoutError(f"Timeout: Nao foram encontrados {expected_count} arquivos {prefix}*.{extension} em {directory}")
         time.sleep(1)
 
 def run_script(script_name, capture_output=True):
     try:
-        print(f"Executando {script_name}...")
+        logger.info(f"Executando {script_name}...")
         result = subprocess.run(
             [sys.executable, script_name],
             check=True,
             capture_output=capture_output,
             text=True
         )
-        if capture_output:
-            if result.stdout:
-                print(f"Saída de {script_name}:\n{result.stdout}")
-            if result.stderr:
-                print(f"Erros de {script_name}:\n{result.stderr}")
-        print(f"{script_name} concluído!")
+        if capture_output and result.stdout:
+            print(f"Saída de {script_name}:")
+            print(result.stdout)
+        if capture_output and result.stderr:
+            logger.error(f"Erros de {script_name}: {result.stderr}")
+        logger.success(f"{script_name} concluído!")
         return True
     except subprocess.CalledProcessError as e:
-        print(f"Erro em {script_name}:\n{e.stderr}")
+        logger.error(f"Erro em {script_name}: {e.stderr}")
         return False
     except Exception as e:
-        print(f"Erro inesperado em {script_name}: {e}")
+        logger.error(f"Erro inesperado em {script_name}: {e}")
         return False
 
 def run_scripts():
-    # NOVO: Captura o estado inicial dos áudios ANTES de qualquer operação
+    logger.header("INÍCIO DA AUTOMAÇÃO ANKI")
+    
+    # Captura o estado inicial dos áudios
     audios_existentes_inicio = obter_audios_existentes()
-    print(f"Áudios existentes antes da automatização: {len(audios_existentes_inicio)}")
-
+    
     # Lê o número de frases do Excel
     frente, verso, audios = ler_dados_excel()
     expected_mp3_count = len(frente)
     
-    print(f"Encontradas {expected_mp3_count} frases")
+    logger.section("ESTATISTÍCAS INICIAIS")
+    logger.info(f"Frases encontradas: {expected_mp3_count}")
+
+    logger.section("EXECUÇÃO DOS SCRIPTS")
 
     # Executa ttmaker.py
     if not run_script("ttmaker.py"):
-        print("Falha em ttmaker.py. Abortando.")
+        logger.error("Falha em ttmaker.py. Abortando.")
         return
 
     # Aguarda os arquivos MP3 serem baixados
     try:
+        logger.info("Aguardando download dos arquivos MP3...")
         wait_for_files(caminho_dos_audios, "ttsmaker-vip-file", ".mp3", expected_mp3_count)
+        logger.success("Todos os arquivos MP3 baixados com sucesso!")
     except TimeoutError as e:
-        print(e)
+        logger.error(str(e))
         return
 
     # Executa audio.py
     if not run_script("audio.py"):
-        print("Falha em audio.py. Abortando.")
+        logger.error("Falha em audio.py. Abortando.")
         return
 
     # Executa enviar_anki.py
     if not run_script("enviar_anki.py"):
-        print("Falha em enviar_anki.py.")
+        logger.error("Falha em enviar_anki.py.")
         return
 
-    # NOVO: Remove apenas os arquivos gerados durante esta execução
-    print("\n=== LIMPEZA FINAL ===")
-    print("Removendo áudios criados durante a automatização...")
+    logger.section("LIMPEZA FINAL")
+    logger.info("Removendo audios criados durante a automacao...")
     if limpar_apenas_novos_audios(audios_existentes_inicio):
-        print("Áudios temporários removidos com sucesso!")
+        logger.success("Áudios temporários removidos com sucesso!")
     else:
-        print("Falha ao remover áudios temporários.")
+        logger.error("Falha ao remover audios temporarios.")
 
-    print("Todos os scripts foram executados com sucesso!")
-
+    logger.header("AUTOMAÇÃO CONCLUÍDA COM SUCESSO!")
 
 if __name__ == "__main__":
     try:
-        # Verifica se o arquivo Excel existe
         if not os.path.exists("cartoes.xlsx"):
-            print("Arquivo 'cartoes.xlsx' não encontrado!")
-            print("Crie o arquivo Excel com as colunas 'Frente' e 'Verso'")
+            logger.error("Arquivo 'cartoes.xlsx' nao encontrado!")
+            logger.info("Crie o arquivo Excel com as colunas 'Frente' e 'Verso'")
         else:
             run_scripts()
     except Exception as e:
-        print(f"Erro geral: {e}")
+        logger.error(f"Erro geral: {e}")

@@ -11,6 +11,29 @@ import os
 import glob
 from config import email_tts, senha_tts, caminho_dos_audios
 
+class Logger:
+    def __init__(self):
+        self.width = 80
+        
+    def header(self, title):
+        print(f"\n{'-' * self.width}")
+        print(f"{title:^{self.width}}")
+        print(f"{'-' * self.width}")
+    
+    def info(self, message):
+        print(f"[INFO] {message}")
+    
+    def success(self, message):
+        print(f"[SUCCESS] {message}")
+    
+    def error(self, message):
+        print(f"[ERROR] {message}")
+    
+    def step(self, step_num, total, message):
+        print(f"[STEP {step_num}/{total}] {message}")
+
+logger = Logger()
+
 def obter_audios_existentes():
     """Retorna lista de arquivos MP3 existentes antes da operação"""
     return set(glob.glob(os.path.join(caminho_dos_audios, "*.mp3")))
@@ -18,57 +41,40 @@ def obter_audios_existentes():
 def limpar_apenas_novos_audios(audios_existentes_inicio):
     """Remove apenas os áudios criados durante a operação"""
     try:
-        # DEBUG: Verificar o que temos
-        print(f"Áudios existentes no início: {len(audios_existentes_inicio)}")
-        
         audios_atuais = set(glob.glob(os.path.join(caminho_dos_audios, "*.mp3")))
-        print(f"Áudios atuais: {len(audios_atuais)}")
-        
         novos_audios = audios_atuais - audios_existentes_inicio
-        print(f"Novos áudios a serem removidos: {len(novos_audios)}")
-        
-        # DEBUG: Listar os arquivos
-        print("Áudios existentes no início:")
-        for audio in sorted(audios_existentes_inicio):
-            print(f"  - {os.path.basename(audio)}")
-        
-        print("Áudios atuais:")
-        for audio in sorted(audios_atuais):
-            print(f"  - {os.path.basename(audio)}")
-        
-        print("Áudios a serem removidos:")
-        for arquivo in novos_audios:
-            print(f"  - {os.path.basename(arquivo)}")
 
         for arquivo in novos_audios:
             try:
                 os.remove(arquivo)
-                print(f"Removido: {os.path.basename(arquivo)}")
+                logger.info(f"Removido: {os.path.basename(arquivo)}")
             except Exception as e:
-                print(f"Erro ao remover {arquivo}: {e}")
+                logger.error(f"Erro ao remover {arquivo}: {e}")
         
-        print(f"Áudios da operação removidos. {len(novos_audios)} arquivos deletados.")
+        logger.info(f"Audios da operacao removidos. {len(novos_audios)} arquivos deletados.")
         return True
     except Exception as e:
-        print(f"Erro ao limpar áudios: {e}")
+        logger.error(f"Erro ao limpar audios: {e}")
         return False
 
 def main():
     """Função principal para ser chamada pelo main.py"""
+    logger.header("INICIANDO TTSMAKER")
+    
     # Guarda os áudios existentes antes de começar
     audios_existentes_inicio = obter_audios_existentes()
-    sucesso_operacao = False  # Flag para controlar se a operação foi bem-sucedida
-    driver = None  # Definir driver como None no início
-
-    print("Iniciando o script!")
+    sucesso_operacao = False
+    driver = None
 
     try:
         frente, verso, audios = ler_dados_excel()
         frases_em_ingles = frente
 
         if not frases_em_ingles:
-            print("Nenhuma frase encontrada.")
+            logger.error("Nenhuma frase encontrada.")
             return False
+
+        logger.info(f"Processando {len(frases_em_ingles)} frases")
 
         # Configurações para download
         chrome_options = Options()
@@ -78,7 +84,7 @@ def main():
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
         
-        chrome_options.add_argument("--log-level=3")  # SILENCIA TODOS OS LOGS
+        chrome_options.add_argument("--log-level=3")
         chrome_options.add_argument("--disable-logging")
         chrome_options.add_argument("--disable-dev-tools")
         chrome_options.add_experimental_option("excludeSwitches", ["enable-logging"])
@@ -97,16 +103,17 @@ def main():
         }
         chrome_options.add_experimental_option("prefs", prefs)
 
-        # INICIALIZAÇÃO COM SELENIUM COMUM
+        # INICIALIZAÇÃO COM SELENIUM
         service = Service(ChromeDriverManager().install())
-        
-        service.creationflags = 0x08000000  # Silencia processos do Windows
+        service.creationflags = 0x08000000
 
+        logger.step(1, 4, "Iniciando navegador")
         driver = webdriver.Chrome(service=service, options=chrome_options)
         
         driver.get("https://pro.ttsmaker.com/user/login")
         
         # Preenche email e senha
+        logger.step(2, 4, "Realizando login")
         email_input = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'input[placeholder="you@email.com"]')))
         email_input.send_keys(email_tts)
         password_input = driver.find_element(By.ID, "password-vue-id")
@@ -127,8 +134,11 @@ def main():
         button_open_studio.click()
 
         # Loop para converter e baixar cada frase
+        logger.step(3, 4, "Convertendo frases para áudio")
         for i, frase in enumerate(frases_em_ingles, 1):
-            try:                
+            try:
+                logger.info(f"Processando frase {i}/{len(frases_em_ingles)}")
+                
                 caixa_texto = WebDriverWait(driver, 20).until(
                     EC.presence_of_element_located((By.ID, "UserInputTextarea"))
                 )
@@ -171,36 +181,34 @@ def main():
                     if mp3s:
                         break
                     if time.time() - start_time > timeout:
-                        print("Timeout no download do áudio")
+                        logger.error(f"Timeout no download do audio para frase {i}")
                         break
                     time.sleep(1)
                 
                 time.sleep(5)
                 
             except Exception as e:
-                print(f"Erro ao processar frase {i}: {e}")
-                print("Continuando para a próxima frase...")
+                logger.error(f"Erro ao processar frase {i}: {e}")
+                logger.info("Continuando para a proxima frase...")
                 continue
 
-        print("Todos os áudios baixados com sucesso!")
-        sucesso_operacao = True  # Marca que a operação foi bem-sucedida
+        logger.step(4, 4, "Finalizando operação")
+        logger.success("Todos os audios baixados com sucesso!")
+        sucesso_operacao = True
         return True
 
     except Exception as e:
-        print(f" Erro durante a execução: {e}")
+        logger.error(f"Erro durante a execucao: {e}")
         sucesso_operacao = False
         return False
 
     finally:
-        # FECHAMENTO CORRETO COM SELENIUM COMUM
         if driver is not None:
             try:
                 driver.quit()
-                print("Navegador fechado com sucesso!")
+                logger.success("Navegador fechado com sucesso!")
             except Exception as e:
-                print(f"Erro ao fechar navegador: {e}")
-        
-        
+                logger.error(f"Erro ao fechar navegador: {e}")
 
 # Para executar diretamente
 if __name__ == "__main__":
